@@ -2,6 +2,13 @@ import torch
 from torch import nn
 import warnings
 import sys
+from google_drive_downloader import GoogleDriveDownloader as gdd
+
+gdd.download_file_from_google_drive(
+    file_id='1rpK8CzAAirq9sWZhe9nlfvxMF1dRgFbF',
+    dest_path='./waveglow_256channels_universal_v5.pt'
+)
+
 sys.path.append('waveglow/')
 
 warnings.filterwarnings('ignore')

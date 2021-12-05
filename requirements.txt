@@ -1,0 +1,7 @@
+torch==1.10.0+cu111
+torchaudio==0.10.0+cu111
+matplotlib~=3.4.3
+librosa~=0.8.1
+wandb~=0.12.4
+wget
+googledrivedownloader
