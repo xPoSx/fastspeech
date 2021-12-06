@@ -174,7 +174,7 @@ class GraphemeAligner(nn.Module):
 class FastSpeechAligner(nn.Module):
     def __init__(self):
         super().__init__()
-        self.alignment_path = 'fastspeech/alignments/'
+        self.alignment_path = 'alignments/'
 
     @torch.no_grad()
     def forward(self, i):
