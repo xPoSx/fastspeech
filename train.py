@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 import torchaudio
+from tqdm import tqdm
 from itertools import repeat
 from src.model import FastSpeech
 from torch.utils.data import DataLoader
@@ -12,14 +13,15 @@ from src.vocoder import Vocoder
 from src.logger import WanDBWriter
 
 
-def loop_loader(loader):
-    for new_loader in repeat(loader):
-        yield from new_loader
+# def loop_loader(loader):
+#     for new_loader in repeat(loader):
+#         yield from new_loader
 
 
-warmup_steps = 1000
-num_iters = 10000
-bs = 64
+warmup_steps = 4000
+num_epochs = 20
+# num_iters = 10000
+bs = 16
 
 val = [
     'A defibrillator is a device that gives a high energy electric shock to the heart of someone who is in cardiac arrest',
@@ -51,48 +53,48 @@ opt = torch.optim.Adam(model.parameters(), lr=4e-3, betas=(.9, .98), eps=1e-9)
 scheduler = torch.optim.lr_scheduler.LambdaLR(opt, lambda x: min((x + 1) ** (-0.5), (x + 1) * (warmup_steps ** (-1.5))))
 
 
-model.train()
-i = 1
-for batch in loop_loader(dataloader):
-    opt.zero_grad()
-    batch.durations = aligner(
-        batch.waveform.to('cuda'), batch.waveforn_length, batch.transcript
-    )
+# model.train()
+# i = 1
+# for batch in loop_loader(dataloader):
+for e in range(num_epochs):
+    model.train()
+    for i, batch in tqdm(enumerate(dataloader)):
+        opt.zero_grad()
+        # batch.durations = aligner(
+        #     batch.waveform.to('cuda'), batch.waveforn_length, batch.transcript
+        # )
 
-    tokens = batch.tokens.to(device)
-    mels = featurizer(batch.waveform).to(device)
-    mel_len = mels.shape[-1] - (mels == -11.5129251)[:, 0, :].sum(dim=-1)
-    mels = mels.transpose(1, 2)
-    durs = batch.durations.to(device) * mel_len.unsqueeze(-1)
-    preds, dur_preds = model(batch.tokens.to(device), durs)
+        tokens = batch.tokens.to(device)
+        mels = featurizer(batch.waveform).to(device)
+        # mel_len = mels.shape[-1] - (mels == -11.5129251)[:, 0, :].sum(dim=-1)
+        mels = mels.transpose(1, 2)
+        # durs = batch.durations.to(device) * mel_len.unsqueeze(-1)
+        preds, dur_preds = model(batch.tokens.to(device), batch.durations)
 
-    min_dur = min(durs.shape[-1], dur_preds.shape[-1])
-    dur_loss = loss_func(durs[:, :min_dur], dur_preds[:, :min_dur])
-    min_mel = min(mels.shape[1], preds.shape[1])
-    mel_loss = loss_func(mels[:, :min_mel, :], preds[:, :min_mel, :])
+        min_dur = min(batch.durations.shape[-1], dur_preds.shape[-1])
+        dur_loss = loss_func(batch.durations[:, :min_dur], dur_preds[:, :min_dur])
+        min_mel = min(mels.shape[1], preds.shape[1])
+        mel_loss = loss_func(mels[:, :min_mel, :], preds[:, :min_mel, :])
 
-    loss = dur_loss + mel_loss
-    loss.backward()
-    opt.step()
-    logger.add_metrics({"Loss": loss.item(), "Melspec Loss": mel_loss.item(), "Duration Loss": dur_loss.item(), "Learning rate": scheduler.get_last_lr()[0]})
-    scheduler.step()
+        loss = dur_loss + mel_loss
+        loss.backward()
+        opt.step()
+        logger.add_metrics({"Loss": loss.item(), "Melspec Loss": mel_loss.item(), "Duration Loss": dur_loss.item(), "Learning rate": scheduler.get_last_lr()[0]})
+        scheduler.step()
 
-    if i % 250 == 0:
-        with torch.no_grad():
-            model.eval()
-            preds = model(val_batch, None)[0]
-            aud_val = vocoder.inference(preds.transpose(1, 2)).cpu()
-            j = 0
-            print(aud_val.shape)
-            for audio, tr in zip(aud_val, val):
-                logger.add_audio(audio.cpu(), tr, 'VALIDATION ' + str(j) + ' ')
-                mel_p = preds[j].detach()
-                logger.add_spectrogram(mel_p.cpu(), tr, 'VALIDATION ' + str(j) + ' ')
-                j += 1
-        model.train()
+    with torch.no_grad():
+        model.eval()
+        preds = model(val_batch, None)[0]
+        aud_val = vocoder.inference(preds.transpose(1, 2)).cpu()
+        j = 0
+        for audio, tr in zip(aud_val, val):
+            logger.add_audio(audio.cpu(), tr, 'VALIDATION ' + str(j) + ' ')
+            mel_p = preds[j].detach()
+            logger.add_spectrogram(mel_p.cpu(), tr, 'VALIDATION ' + str(j) + ' ')
+            j += 1
 
-    i += 1
-    if i > num_iters:
-        break
+        # i += 1
+        # if i > num_iters:
+        #     break
 
 torch.save(model.state_dict(), 'fastspeech')

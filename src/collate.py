@@ -22,7 +22,7 @@ class Batch:
 class LJSpeechCollator:
 
     def __call__(self, instances: List[Tuple]) -> Batch:
-        waveform, waveforn_length, transcript, tokens, token_lengths = list(
+        waveform, waveforn_length, transcript, tokens, token_lengths, durations = list(
             zip(*instances)
         )
 
@@ -36,4 +36,6 @@ class LJSpeechCollator:
         ]).transpose(0, 1)
         token_lengths = torch.cat(token_lengths)
 
-        return Batch(waveform, waveforn_length, transcript, tokens, token_lengths)
+        durations = pad_sequence(durations).transpose(0, 1)
+
+        return Batch(waveform, waveforn_length, transcript, tokens, token_lengths, durations)

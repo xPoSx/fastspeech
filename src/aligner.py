@@ -1,6 +1,8 @@
 import torch
 import torchaudio
 from dataclasses import dataclass
+import numpy as np
+import os
 from torch import nn
 from typing import List, Union
 from src.melspec import MelSpectrogramConfig
@@ -167,3 +169,14 @@ class GraphemeAligner(nn.Module):
         for i, p in enumerate(path):
             trellis_with_path[p.time_index, p.token_index] = float('nan')
         plt.imshow(trellis_with_path[1:, 1:].T, origin='lower')
+
+
+class FastSpeechAligner(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.alignment_path = 'fastspeech/alignments/'
+
+    @torch.no_grad()
+    def forward(self, i):
+        duration = np.load(os.path.join(self.alignment_path, str(i)+".npy"))
+        return torch.from_numpy(duration)
