@@ -49,6 +49,7 @@ except:
     pass
 
 loss_func = nn.MSELoss()
+dur_loss_func = nn.L1Loss()
 opt = torch.optim.Adam(model.parameters(), lr=4e-3, betas=(.9, .98), eps=1e-9)
 scheduler = torch.optim.lr_scheduler.LambdaLR(opt, lambda x: min((x + 1) ** (-0.5), (x + 1) * (warmup_steps ** (-1.5))))
 
@@ -65,21 +66,22 @@ for e in range(num_epochs):
         # )
 
         tokens = batch.tokens.to(device)
+        durations = batch.durations.to(device).float()
         mels = featurizer(batch.waveform).to(device)
         # mel_len = mels.shape[-1] - (mels == -11.5129251)[:, 0, :].sum(dim=-1)
         mels = mels.transpose(1, 2)
         # durs = batch.durations.to(device) * mel_len.unsqueeze(-1)
-        preds, dur_preds = model(batch.tokens.to(device), batch.durations)
+        preds, dur_preds = model(batch.tokens.to(device), durations)
 
-        min_dur = min(batch.durations.shape[-1], dur_preds.shape[-1])
-        dur_loss = loss_func(batch.durations[:, :min_dur], dur_preds[:, :min_dur])
+        min_dur = min(durations.shape[-1], dur_preds.shape[-1])
+        dur_loss = dur_loss_func(durations[:, :min_dur], dur_preds[:, :min_dur])
         min_mel = min(mels.shape[1], preds.shape[1])
         mel_loss = loss_func(mels[:, :min_mel, :], preds[:, :min_mel, :])
-
         loss = dur_loss + mel_loss
         loss.backward()
         opt.step()
-        logger.add_metrics({"Loss": loss.item(), "Melspec Loss": mel_loss.item(), "Duration Loss": dur_loss.item(), "Learning rate": scheduler.get_last_lr()[0]})
+        logger.add_metrics({"Loss": loss.item(), "Melspec Loss": mel_loss.item(), "Duration Loss": dur_loss.item(),
+                            "Learning rate": scheduler.get_last_lr()[0]})
         scheduler.step()
 
     with torch.no_grad():
@@ -97,4 +99,4 @@ for e in range(num_epochs):
         # if i > num_iters:
         #     break
 
-torch.save(model.state_dict(), 'fastspeech')
+    torch.save(model.state_dict(), 'fastspeech')

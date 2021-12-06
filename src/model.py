@@ -125,7 +125,7 @@ class LengthRegulator(nn.Module):
         pred_dur = self.dp(x)
         res = []
         if self.training:
-            cur_dur = torch.round(durations).int()
+            cur_dur = durations.int()
         else:
             cur_dur = torch.round(pred_dur).int()
 
@@ -133,6 +133,7 @@ class LengthRegulator(nn.Module):
         for i in range(x.shape[0]):
             res.append(torch.repeat_interleave(x[i, :min_dur], cur_dur[i, :min_dur], 0))
         res = pad_sequence(res, batch_first=True)
+        res = res.to('cuda')
         return res, pred_dur
 
 
