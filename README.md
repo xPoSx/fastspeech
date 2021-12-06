@@ -20,3 +20,10 @@
 ```shell
 !cd fastspeech && python3 train.py
 ```
+
+### Weigths
+`fastspeech`: https://drive.google.com/file/d/1vUNaNPTKqN46cUjAlskzcbJnH0MBUW4L/view?usp=sharing
+
+`fastspeech_new`: https://drive.google.com/file/d/1-HyvXNfD_xmNWHZD0teWNnQketfa9Y7y/view?usp=sharing
+
+`fastspeech_16`: https://drive.google.com/file/d/1D4y7MBepbMvVLSPOqvlgAshKp_RNDUS9/view?usp=sharing
