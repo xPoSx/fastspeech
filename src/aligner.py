@@ -3,7 +3,7 @@ import torchaudio
 from dataclasses import dataclass
 from torch import nn
 from typing import List, Union
-from melspec import MelSpectrogramConfig
+from src.melspec import MelSpectrogramConfig
 from torch.nn.utils.rnn import pad_sequence
 import matplotlib.pyplot as plt
 

@@ -77,7 +77,7 @@ for batch in loop_loader(dataloader):
     opt.step()
     logger.add_metrics({"Loss": loss.item(), "Learning rate": 3e-4})
 
-    if i % 100 == 0:
+    if i % 20 == 0:
         rand_idx = random.randint(0, bs)
         tr = batch.transcript[rand_idx]
         mel_t = mels[rand_idx].detach()
@@ -89,7 +89,7 @@ for batch in loop_loader(dataloader):
         print('duration loss:', dur_loss.item(), '\t', 'melspec loss:', mel_loss.item())
     scheduler.step()
 
-    if i % 1000 == 0:
+    if i % 125 == 0:
         with torch.no_grad():
             model.eval()
             preds, _ = model(val_batch, None)[0]
